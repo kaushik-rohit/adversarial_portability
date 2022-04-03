@@ -4,7 +4,10 @@ import pickle
 import shutil
 import pathlib
 import shared
+import numpy as np
 import os
+
+cost_matrix_path = './data/cost_matrix.pkl'
 
 def cp_data():
     with open('dataset.pkl', 'rb') as f:
@@ -32,24 +35,38 @@ def format_predictions(filename):
     true_labels = {}
 
     for image_file in tqdm(image_files):
-        for source in shared.model_names:
-            row = [image_file, source]
-            for target in shared.model_names:
-                df2 = df.loc[(df['image'] == image_file) & (df['target'] == target)]
-                # print(df2)
-                assert(len(df2) == 1)
-                if image_file not in true_labels:
-                    true_labels[image_file] = df2.iloc[0]['true_label']
-                val = df2.iloc[0][source]
-                row.append(val)
+        df2 = df.loc[df.image == image_file]
+
+        assert(len(df2) == len(shared.model_names))
+        assert (list(df2['target'].values) == shared.model_names)
+
+        true_labels[image_file] = df2.iloc[0]['true_label']
+
+        for model in shared.model_names:
+            row = [image_file, model]
+            val = df2[model].T
+            row.extend(val)
             row.append(true_labels[image_file])
             rows.append(row)
+
+        # for source in shared.model_names:
+        #     row = [image_file, source]
+        #     for target in shared.model_names:
+        #         df2 = df.loc[(df['image'] == image_file) & (df['target'] == target)]
+        #         # print(df2)
+        #         assert(len(df2) == 1)
+        #         if image_file not in true_labels:
+        #             true_labels[image_file] = df2.iloc[0]['true_label']
+        #         val = df2.iloc[0][source]
+        #         row.append(val)
+        #     row.append(true_labels[image_file])
+        #     rows.append(row)
     
     res_df = pd.DataFrame(rows, columns=cols)
     res_df.to_csv('output.csv', index=False)
 
 
-def predictions_to_distance(path, cost_matrix, out_name):
+def predictions_to_distance(path, cost_matrix, out_name, target='true_label'):
     df = pd.read_csv(path)
 
     rows = []
@@ -59,18 +76,40 @@ def predictions_to_distance(path, cost_matrix, out_name):
 
     for index, row in df.iterrows():
         entry = [row['image'], row['source']]
-        true_label = row['true_label']
+        true_label = row[target]
 
         for model in shared.model_names:
             entry.append(cost_matrix[true_label][row[model]])
         rows.append(entry)
 
-    cols = df.columns[0:-1]
+    if target == 'target':
+        cols = df.columns[0:-2]
+    else:
+        cols = df.columns[0:-1]
 
     res_df = pd.DataFrame(rows, columns=cols)
 
     res_df.to_csv(out_name, index=False)
 
+def get_target(output_path):
+    with open(cost_matrix_path, 'rb') as f:
+        cost_matrix = pickle.load(f)
+
+    def get_target_label(x, target_option='closest'):
+        values = np.array(list(cost_matrix[x].values()))
+
+        if target_option == 'closest':
+            return np.where(values == np.min(values[np.nonzero(values)]))[0][0]
+        elif target_option == 'farthest':
+            return np.where(values == np.max(values[np.nonzero(values)]))[0][0]
+        elif target_option == 'median':
+            return np.where(values == np.median(values[np.nonzero(values)]))[0][0]
+
+    df = pd.read_csv(output_path)
+
+    df['target'] = df['true_label'].apply(lambda x: get_target_label(x, 'closest'))
+
+    df.to_csv(output_path, index=False)
 
 def get_predictions_distance_metric(path, outpath):
     df = pd.read_csv(path)
