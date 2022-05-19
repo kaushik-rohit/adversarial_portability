@@ -48,22 +48,9 @@ def format_predictions(filename):
             row.extend(val)
             row.append(true_labels[image_file])
             rows.append(row)
-
-        # for source in shared.model_names:
-        #     row = [image_file, source]
-        #     for target in shared.model_names:
-        #         df2 = df.loc[(df['image'] == image_file) & (df['target'] == target)]
-        #         # print(df2)
-        #         assert(len(df2) == 1)
-        #         if image_file not in true_labels:
-        #             true_labels[image_file] = df2.iloc[0]['true_label']
-        #         val = df2.iloc[0][source]
-        #         row.append(val)
-        #     row.append(true_labels[image_file])
-        #     rows.append(row)
     
     res_df = pd.DataFrame(rows, columns=cols)
-    res_df.to_csv('output.csv', index=False)
+    res_df.to_csv(filename, index=False)
 
 
 def predictions_to_distance(path, cost_matrix, out_name, target='true_label'):
@@ -91,7 +78,27 @@ def predictions_to_distance(path, cost_matrix, out_name, target='true_label'):
 
     res_df.to_csv(out_name, index=False)
 
-def get_target(output_path):
+def helper(attack, alpha):
+    path = './results/fixed_alpha_with_preds/{}/{}'.format(attack, alpha)
+    filename = os.path.join(path, '{}_alpha={}_preds.csv'.format(attack, alpha))
+    cost_matrix = './data/cost_matrix.pkl'
+    out_name = os.path.join(path, 'dis.csv')
+    predictions_to_distance(filename, cost_matrix, out_name)
+    get_predictions_distance_metric(out_name, os.path.join(path, 'dis_metric.csv'))
+
+def helper2(attack, alpha, target):
+    path = './results/target_attacks/{}/{}/{}'.format(target, attack, alpha)
+    filename = os.path.join(path, 'targeted_{}_alpha={}_preds.csv'.format(attack, alpha))
+    cost_matrix = './data/cost_matrix.pkl'
+    out_name = os.path.join(path, 'dis.csv')
+
+    format_predictions(filename)
+    get_target(filename, target)
+    predictions_to_distance(filename, cost_matrix, out_name, target='target')
+    get_predictions_distance_metric(out_name, os.path.join(path, 'dis_metric.csv'))
+
+
+def get_target(output_path, target_option):
     with open(cost_matrix_path, 'rb') as f:
         cost_matrix = pickle.load(f)
 
@@ -107,7 +114,7 @@ def get_target(output_path):
 
     df = pd.read_csv(output_path)
 
-    df['target'] = df['true_label'].apply(lambda x: get_target_label(x, 'closest'))
+    df['target'] = df['true_label'].apply(lambda x: get_target_label(x, target_option))
 
     df.to_csv(output_path, index=False)
 
@@ -126,7 +133,7 @@ def get_predictions_distance_metric(path, outpath):
         for target in shared.model_names:
             mean = df_source[target].mean()
             std = df_source[target].std()
-            row.append('{}, {}'.format(mean, std))
+            row.append('{:.2f}, {:.2f}'.format(mean, std))
         rows.append(row)
     res_df = pd.DataFrame(rows, columns=cols)
 
@@ -158,5 +165,33 @@ def get_cost_matrix():
     res_df.to_csv('cost_matrix.csv', index=False)
 
 
+def get_best_portability(attack, alpha):
+    path = './results/fixed_alpha/{}_alpha={}.csv'.format(attack, alpha)
+    df = pd.read_csv(path)
+
+    rows = []
+    for index, row in df.iterrows():
+        max_port = 0
+        min_port = 10001
+        max_model = ''
+        min_model = ''
+        for model in shared.model_names:
+            if model == row['target']:
+                continue
+            if max_port < row[model]:
+                max_port = row[model]
+                max_model = model
+            if min_port > row[model]:
+                min_port = row[model]
+                min_model = model
+        max_string = '{} ({})'.format(max_model, max_port)
+        min_string = '{} ({})'.format(min_model, min_port)
+        rows.append([row['target'], max_string, min_string])
+
+    res_df = pd.DataFrame(rows, columns=['source', 'maximum', 'minimum'])
+    res_df.to_csv('max_min_{}_{}.csv'.format(attack, alpha), index=False)
+
+
 if __name__ == '__main__':
-    format_predictions('./results/fixed_alpha_with_preds/FGSM_alpha=0.01_preds.csv')
+    # format_predictions('./results/fixed_alpha_with_preds/FGSM_alpha=0.01_preds.csv')
+    get_best_portability('PGD', 0.3)
