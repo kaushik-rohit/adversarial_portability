@@ -10,6 +10,10 @@ import os
 cost_matrix_path = './data/cost_matrix.pkl'
 
 def cp_data():
+    '''
+    copies the selected data 10 image per 1000 class which 
+    are classified correctly by all of our neural network to a new location
+    '''
     with open('dataset.pkl', 'rb') as f:
         data = pickle.load(f)
 
@@ -54,6 +58,12 @@ def format_predictions(filename):
 
 
 def predictions_to_distance(path, cost_matrix, out_name, target='true_label'):
+    '''
+    @path: location to predictions
+    @cost_matix: path to matrix containing cost of missclassification
+    @out_name: output path
+    @target: true_label in case of untargeted attack and target in case of targeted attack
+    '''
     df = pd.read_csv(path)
 
     rows = []

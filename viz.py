@@ -19,6 +19,10 @@ plt.rc('axes', labelsize=4)
 plt.rc('axes', titlesize=4)
 
 def untargeted_heatmaps():
+    '''
+    generated 3*3 heatmaps for untargeted attacks corresponding
+    to 3 attacks and 3 different perturbation constant
+    '''
     fig, axes = plt.subplots(ncols=3, nrows=3, sharex=True, sharey=True)
     # cbar_ax = fig.add_axes([.91, .3, .03, .4])
     
@@ -32,6 +36,10 @@ def untargeted_heatmaps():
 
 
 def targeted_heatmaps():
+    '''
+    generated 3*3 heatmaps for targeted attacks corresponding
+    to 3 attacks and 3 different perturbation constant
+    '''
     targets = ['closest', 'farthest', 'median']
 
     min_max = {
@@ -57,6 +65,9 @@ def targeted_heatmaps():
     
 
 def line_plot():
+    '''
+    plot for perturbation constant vs portability
+    '''
     models = ['resnet18', 'vgg16', 'googlenet', 'mobilenet_v3_small', 'densenet']
 
     fig, axes = plt.subplots(figsize=(7, 3), ncols=3, nrows=1, sharex=True, sharey=True)
@@ -89,6 +100,10 @@ def get_min_max(df):
     return min(mean), max(mean), min(std), max(std)
 
 def plot_std_mean():
+    '''
+    plot std and mean of the distance between prediction and target class
+    as circles for each of the selected neural networks.
+    '''
     for attack in attacks:
         for alpha in alphas:
             fig, ax = plt.subplots(figsize=(7, 8))
