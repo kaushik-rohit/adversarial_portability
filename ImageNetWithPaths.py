@@ -1,7 +1,9 @@
 from torchvision import datasets
 
 class ImageNetWithPaths(datasets.ImageNet):
-
+    '''
+    ImageNet dataloader with the path of images returned in a tuple
+    '''
     def __getitem__(self, index):
         # this is what ImageFolder normally returns 
         original_tuple = super(ImageNetWithPaths, self).__getitem__(index)
