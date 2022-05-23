@@ -10,21 +10,28 @@ import pickle
 import os
 
 # constants
-target_option = 'median'
+target_option = 'median' # target selection criterai could be median, closest, farthest
 imagenet_path = '/local/scratch/rohit/datasets/ImageNet/ILSVRC2012'
 output_path = '/local/scratch/rohit/datasets/ImageNet/ILSVRC2012/adv_target_ex/{}/{}/{}/{}/train/{}'
 cost_matrix_path = '/home/user/rohit/adversarial-attacks/data/cost_matrix.pkl'
 
-alphas = [0.01]
-attacks = ['FGV']
+alphas = [0.01, 0.1, 0.3]
+attacks = ['FGSM', 'FGV', 'PGD']
 BATCH_SIZE = 4
-gpu_ids = [1, 2, 3, 4, 5, 6, 7]
+gpu_ids = [1, 2, 3, 4, 5, 6, 7] # ids of the gpus to be used
 
 n_GPU = len(gpu_ids)
 pbar = tqdm(total=len(model_names) * 10000 / (BATCH_SIZE * n_GPU))
 
 
 def generate_adversarial_example(rank, model_name):
+    '''
+    @rank: id of the gpu to be used
+    @model name: name of the neural network model to be used as a source
+    
+    generates targeted adversarial example with the specified attacks and target selection
+    criteria.
+    '''
     print('generating adversarial examples using {} on GPU {}'.format(model_name, rank))
 
     model = get_model(model_name)
