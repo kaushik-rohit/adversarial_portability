@@ -14,13 +14,21 @@ import os
 # constants
 imagenet_path = '/local/scratch/rohit/datasets/ImageNet/ILSVRC2012'
 output_path = '/local/scratch/rohit/datasets/ImageNet/ILSVRC2012/adv_ex/{}/{}/{}/train/{}'
-alphas = [0.01]
-attacks = ['FGV']
+alphas = [0.01, 0.1, 0.3] #pertubation constants
+attacks = ['FGSM', 'PGD', 'FGV']
 BATCH_SIZE = 4
-gpu_ids = [0, 2]
+gpu_ids = [0, 2] # ids of gpu to use for parallel processing
 n_GPU = len(gpu_ids)
-pbar = tqdm(total=len(model_names) * 10000 / (BATCH_SIZE * n_GPU))
+pbar = tqdm(total=len(model_names) * 10000 / (BATCH_SIZE * n_GPU)) # progress bar
+
 def generate_adversarial_example(rank, model_name):
+    '''
+    @rank: id of the gpu to be used
+    @model_name: name of source neural network model
+    
+    generates adversarial images for all the specified attacks and perturbation constant
+    and stores it in a pytorch tensor.
+    '''
     print('generating adversarial examples using {} on GPU {}'.format(model_name, rank))
 
     model = get_model(model_name)
@@ -55,7 +63,8 @@ def generate_adversarial_example(rank, model_name):
             for alpha in alphas:
                 adv_model = adversarial_models[attack][alpha]
                 adv_untargeted = adv_model.perturb(cln_data, true_label)
-
+                
+                # save the adversarial examples in form of pytorch tensor
                 for batch in range(BATCH_SIZE):
                     class_name = paths[batch].split('/')[-2]
                     file_name = paths[batch].split('/')[-1].split('.JPEG')[0] + '.pt'
